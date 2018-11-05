@@ -7,7 +7,7 @@ I used the actor-critic structure with each of the two hidden layers containing 
 
 
 ### Hyperparameters
-A learning rate of 1e-4 on each fully connected layer.  A Tau value of .001 and Gamma of .99 were also used. Batch size was increased to 128 and the replay buffer size was left at 1e5.  Ornstein-Uhlenbeck noise parameters of 0.15 for Theta and 0.2 for Sigma were also left unchanged.
+A learning rate of 1e-4 was used for each fully connected layer.  A Tau value of .001 and Gamma of .99 were also used. Batch size was increased to 128 and the replay buffer size was left at 1e5.  Ornstein-Uhlenbeck noise parameters of 0.15 for Theta and 0.2 for Sigma were also left unchanged.
 
 
 ## Results and Future Work
@@ -16,7 +16,7 @@ This model is able to achieve the the reward performance goal of 30 in about 40 
 
 <img src="score_episode_num.png" width="510" height="340" />
 
-Architecture could be researched further.  Specifically, I'd like to use AdaNet (https://arxiv.org/abs/1607.01097) to see what different neural architectures provides additional improvements (DRL building DRL Cont. Control Systems).  
+Architecture could be researched further.  Specifically, I'd like to use AdaNet (https://arxiv.org/abs/1607.01097) to see what different neural architectures provide performance improvements.  Interestingly, this would be a DRL system building a DRL Contineous Control System.  
 
 Also, increasing the utility of the environment by perhaps increasing to six degrees of freedom + gripper. 
 
