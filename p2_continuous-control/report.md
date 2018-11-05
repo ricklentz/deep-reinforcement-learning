@@ -3,11 +3,11 @@
 ### Model Architecture
 The Udacity provided actor and critic code in PyTorch as well as the noise function.  This code base was adapted for the 20 agent (version 2) environment. 
 
-I used the actor-critic structure with each of the two hidden layers containing 400 and 300 nodes respectively.  The ReLU activation is used on the hidden layers and tanh is used for the output layers. This architecture improves on the course's baseline performance provided as a starting point for this project.
+I used the actor-critic structure with each of the two hidden layers containing 400 and 300 nodes respectively.  ReLU activation is used on the hidden layers and tanh is used for the output layers. This architecture improves on the course's baseline performance provided as a starting point for this project.
 
 
 ### Hyperparameters
-A learning rate of 1e-4 was used for each fully connected layer.  A Tau value of .001 and Gamma of .99 were also used. Batch size was increased to 128 and the replay buffer size was left at 1e5.  Ornstein-Uhlenbeck noise parameters of 0.15 for Theta and 0.2 for Sigma were also left unchanged.
+A learning rate of 1e-4 was used for each fully connected layer.  Tau value of .001 and Gamma of .99 were also used. Batch size was increased to 128 and the replay buffer size was left at 1e5.  Ornstein-Uhlenbeck noise parameters of 0.15 for Theta and 0.2 for Sigma were also left unchanged. These parameters were carried forward from the Actor-Critic Method lesson (https://github.com/udacity/deep-reinforcement-learning/tree/master/ddpg-bipedal).
 
 
 ## Results and Future Work
