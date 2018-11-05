@@ -1,7 +1,6 @@
 ## Deep Deterministic Policy Gradient - Continuous Control Task
 
-[![20 Agent Reacher Environment](https://img.youtube.com/vi/ijF98-GBGqo/0.jpg)]
-(https://www.youtube.com/watch?v=ijF98-GBGqo)
+[![20 Agent Reacher Environment](https://img.youtube.com/vi/ijF98-GBGqo/0.jpg)](https://www.youtube.com/watch?v=ijF98-GBGqo)
 
 ### Model Architecture
 The Udacity provided actor and critic code in PyTorch as well as the noise function.  This code base was adapted for the 20 agent (version 2) environment. 
