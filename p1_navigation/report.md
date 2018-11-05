@@ -17,8 +17,8 @@ This model achieves a high-performance score of 50 in about 64 episodes.
 
 <img src="score_episode_num.png" width="547" height="335" />
 
-The architecture can be improved further.  While viewing the agent's performance, it is not very good.  For example, it gets stuck on the edges.  It also oscillates between discrete control values as it moves diagonally towards the intended target.  Most real-world controls are contineous control systems - but we cover this architecture in the next project.  
+The architecture can be improved further. While viewing the agent's performance, it is not very good. For example, it gets stuck on the edges. It also oscillates between discrete control values as it moves diagonally towards the intended target. Most real-world controls are continuous control systems - but we cover this architecture in the next project.
 
 I would like to see the solved navigation pixels solution to see how image features can be used to represent spatial relationships.
 
-I would also like to see how Active Learning, a primary research focus of my employment as a machine learning researcher, may provide labeled features that can reduce needed computational training resources. 
+I would also like to see how Active Learning, a primary research focus of my employment as a machine learning researcher, may provide labeled features that can reduce needed computational training resources.
