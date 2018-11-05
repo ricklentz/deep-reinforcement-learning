@@ -12,7 +12,7 @@ A learning rate of 1e-4 on each fully connected layer.  A Tau value of .001 and 
 
 ## Results and Future Work
 
-This model is able to achieve the the reward performance goal of 30 in about 110 episodes.
+This model is able to achieve the the reward performance goal of 30 in about 40 episodes.
 
 <img src="score_episode_num.png" width="510" height="340" />
 
