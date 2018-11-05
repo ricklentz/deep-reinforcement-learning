@@ -1,7 +1,6 @@
 ## Deep Deterministic Policy Gradient - Continuous Control Task
 
-[![20 Agent Reacher Environment]
-(https://img.youtube.com/vi/ijF98-GBGqo/0.jpg)]
+[![20 Agent Reacher Environment](https://img.youtube.com/vi/ijF98-GBGqo/0.jpg)]
 (https://www.youtube.com/watch?v=ijF98-GBGqo)
 
 ### Model Architecture
