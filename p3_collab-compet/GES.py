@@ -1,7 +1,62 @@
 
 from unityagents import UnityEnvironment
-from agent import agent
 import numpy as np
+from agent import MultiAgentDeepDeterministicPolicyGradient
+import torch
+
+
+import time
+from collections import deque
+import numpy as np
+
+
+
+class Stats():
+    def __init__(self):
+        self.score = None
+        self.avg_score = None
+        self.std_dev = None
+        self.scores = []                         # list containing scores from each episode
+        self.avg_scores = []                     # list containing average scores after each episode
+        self.scores_window = deque(maxlen=100)   # last 100 scores
+        self.best_avg_score = -np.Inf            # best score for a single episode
+        self.time_start = time.time()            # track cumulative wall time
+        self.total_steps = 0                     # track cumulative steps taken
+
+    def update(self, steps, rewards, i_episode):
+        """Update stats after each episode."""
+        self.total_steps += steps
+        self.score = sum(rewards)
+        self.scores_window.append(self.score)
+        self.scores.append(self.score)
+        self.avg_score = np.mean(self.scores_window)
+        self.avg_scores.append(self.avg_score)
+        self.std_dev = np.std(self.scores_window)
+        # update best average score
+        if self.avg_score > self.best_avg_score and i_episode > 100:
+            self.best_avg_score = self.avg_score
+
+    def is_solved(self, i_episode, solve_score):
+        """Define solve criteria."""
+        return self.avg_score >= solve_score and i_episode >= 100
+
+    def print_episode(self, i_episode, steps, stats_format, buffer_len, noise_weight,
+                      critic_loss_01, critic_loss_02,
+                      actor_loss_01, actor_loss_02,
+                      noise_val_01, noise_val_02,
+                      rewards_01, rewards_02):
+        common_stats = 'Episode: {:5}   Avg: {:8.3f}   BestAvg: {:8.3f}   σ: {:8.3f}  |  Steps: {:8}   Reward: {:8.3f}  |  '.format(i_episode, self.avg_score, self.best_avg_score, self.std_dev, steps, self.score)
+        print('\r' + common_stats + stats_format.format(buffer_len, noise_weight), end="")
+       
+
+    def print_epoch(self, i_episode, stats_format, *args):
+        n_secs = int(time.time() - self.time_start)
+        common_stats = 'Episode: {:5}   Avg: {:8.3f}   BestAvg: {:8.3f}   σ: {:8.3f}  |  Steps: {:8}   Secs: {:6}      |  '.format(i_episode, self.avg_score, self.best_avg_score, self.std_dev, self.total_steps, n_secs)
+        print('\r' + common_stats + stats_format.format(*args))
+
+    def print_solve(self, i_episode, stats_format, *args):
+        self.print_epoch(i_episode, stats_format, *args)
+        print('\nSolved in {:d} episodes!'.format(i_episode-100))
 
 class general_environment_solver():
     """ General Solver for Unity Environments """
@@ -15,7 +70,7 @@ class general_environment_solver():
             unity_env (string): path to unity environment
         """
         self.env = UnityEnvironment(file_name=unity_env)
-        
+        self.train_mode = True
        
         # set the agents
         self.agent_list = list()
@@ -29,7 +84,7 @@ class general_environment_solver():
             print("Brain name " + self.brain_name)
         
         # refresh the environment
-        self.env_info = self.env.reset(train_mode=train_mode)[self.brain_name]
+        self.env_info = self.env.reset(train_mode=self.train_mode)[self.brain_name]
         
         # number of agents
         self.num_agents = len(self.env_info.agents)
@@ -42,21 +97,11 @@ class general_environment_solver():
             print('Size of each action:', self.action_size)
         
         # examine the state space 
-        states = self.env_info.vector_observations
-        self.state_size = states.shape[1]
-        if display_info==True:
-            print('Each agent observes a stacked (x3) state of total length: {}'.format( self.state_size))
+        self.state = self.env_info.vector_observations
         
-        # display the vector space
-        if display_info==True:
-            for idx in range(self.num_agents):
-                print('The state for the agent ' + str(idx) + ' looks like: ', states[idx])
-        
-        # add each agents specific parameters
-        for idx in range(self.num_agents):
-            self.agent_list.append( agent(state_size=self.state_size, action_size=self.action_size ))
+        self.agent = MultiAgentDeepDeterministicPolicyGradient()
                                    
-    def run_ddpg(self, n_episodes=6500, max_timesteps=10000, min_solve_threshold=0.50, scores_window_length=100):
+    def run_maddpg(self, n_episodes=6500, max_timesteps=1000, min_solve_threshold=0.50, scores_window_length=100):
         # train the agent
         from collections import deque
         """ MultiAgent Deep Deterministic Policy Gradients
@@ -73,87 +118,65 @@ class general_environment_solver():
         all_scores = []
 
         scores_window = deque(maxlen=scores_window_length)
+        stats = Stats()
+        stats_format = 'Buffer: {:6}   NoiseW: {:.4}'
 
         for i_episode in range(1, n_episodes+1):
-            self.env_info = self.env.reset(train_mode=True)[self.brain_name]  
-            states = self.env_info.vector_observations 
-            #print(states.shape)
-            #print(str(self.state_size * self.num_agents))
-            #states = np.reshape(states, (1,48))
-            #print(states.shape)
-            for idx, agent in enumerate( self.agent_list ):
-                agent.reset()
-            scores = np.zeros(self.num_agents)
-            while True: #for t in range(max_timesteps):
-                # evaluate actions
-                #print(str(t) + ' ' + str(states.shape))
-                #print(str(t) + ' ' + str(states[0].shape))
-                actions = list()
-                for idx, agent in enumerate( self.agent_list ):
-                    action = agent.act(np.reshape(states[idx],(1,self.state_size)))
-                    actions.append(action)
-                    #print(str(t) + ' ' + str(states[1].shape))
-                    #act_1 = self.agent_list[1].act(np.reshape(states[1],(1,24)))          
-                    
-                    #print(actions.shape)
-                    #actions = np.reshape(actions, (1, 4))
-                    #print('Actions')
-                    #print(actions)
-                    # this environment is common to multiple agents, play it forward one step
-                #actions_shaped = np.reshape(np.concatenate((actions[0],actions[1]),axis=0), (1, 4))
-                self.env_info = self.env.step(np.concatenate((actions[0],actions[1]),axis=0))[self.brain_name]
-                    
-                #print('Env Info')
-                #print(env_info)
-                # now observe the next state for each action                   
-                #next_states = self.env_info.vector_observations
-                next_states = self.env_info.vector_observations         # get next states
-                #next_states = np.reshape(next_states, (1, 48))     # combine each agent's state into one st
-                #print('next states')
-                #print(next_states)
-                # the actions result in a set of awards
-                rewards = self.env_info.rewards
-                #print('rewards')
-                #print(rewards)
-                # the solution may also be met by actions
-                dones = self.env_info.local_done 
-                #print('dones')
-                #print(dones)
-                # given information afout the state space, reward, actions, etc learn about the stochastic process
-                #actions = np.concatenate(actions, axis=0) 
-                for idx, agent in enumerate( self.agent_list ):
-                    #print(states[idx].shape)
-                    #print(actions[idx].shape)
-                    #print(actions[idx])
-                    #print(rewards[idx])
-                    #print(next_states[idx].shape)
-                    #print(dones[idx])
-                    agent.step(states[idx], actions[idx], rewards[idx], next_states[idx], dones[idx])
-            
-                # tally results
-                scores += rewards
-            
-                # env changes as time passes, future expectations are now 
-                states = next_states
+            rewards = []
+            self.env_info = self.env.reset(train_mode=self.train_mode)[self.brain_name]
+            self.state = self.env_info.vector_observations
 
-                # end is needed
-                if np.any(dones):
-                    break 
+            # loop over steps
+            for t in range(max_timesteps):
+                # select an action
+                if self.agent.evaluation_only:  # disable noise on evaluation
+                    action = self.agent.act(self.state, add_noise=False)
+                else:
+                    action = self.agent.act(self.state)
 
-                # save most recent score
-                scores_window.append(np.max(scores))
-                all_scores.append(np.max(scores))
+                # take action in environment
+                self.env_info = self.env.step(action)[self.brain_name]
+                next_state = self.env_info.vector_observations
+                reward = self.env_info.rewards
+                done = self.env_info.local_done
 
-            if (i_episode % 10 == 0):
-                print('\rEpisode {}\tMax Reward: {:.2f}\tAverage Score: {:.2f}'.format(i_episode, np.max(scores), np.mean(scores_window)))
-                #for idx, agent in enumerate( self.agent_list ):
-                    #print(agent.timestep)
+                # update agent with returned information
+                self.agent.step(self.state, action, reward, next_state, done)
+                self.state = next_state
+                rewards.append(reward)
+                if any(done):
+                    break
 
-            if np.mean(scores_window) >= min_solve_threshold:
-                print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode-100, np.mean(scores_window)))
-                for idx, agent in enumerate( self.agent_list ):
-                    torch.save(agent.actor_local.state_dict(), 'checkpoint_actor_agent'+str(idx)+'.pth')
-                    torch.save(agent.critic_local.state_dict(), 'checkpoint_critic_agent'+str(idx)+'.pth')
+            # every episode
+            buffer_len = len(self.agent.memory)
+            per_agent_rewards = []  # calculate per agent rewards
+            for i in range(self.agent.num_agents):
+                per_agent_reward = 0
+                for step in rewards:
+                    per_agent_reward += step[i]
+                per_agent_rewards.append(per_agent_reward)
+            stats.update(t, [np.max(per_agent_rewards)], i_episode)  # use max over all agents as episode reward
+            stats.print_episode(i_episode, t, stats_format, buffer_len, self.agent.noise_weight,
+                                self.agent.agents[0].critic_loss, self.agent.agents[1].critic_loss,
+                                self.agent.agents[0].actor_loss, self.agent.agents[1].actor_loss,
+                                self.agent.agents[0].noise_val, self.agent.agents[1].noise_val,
+                                per_agent_rewards[0], per_agent_rewards[1])
+
+            # every epoch (100 episodes)
+            if i_episode % 100 == 0:
+               #stats.print_epoch(i_episode, stats_format, buffer_len, agent.noise_weight)
+               save_name = 'saves/episode.{}.'.format(i_episode)
+               for i, save_agent in enumerate(self.agent.agents):
+                   torch.save(save_agent.actor_local.state_dict(), save_name + str(i) + '.actor.pth')
+                   torch.save(save_agent.critic_local.state_dict(), save_name + str(i) + '.critic.pth')
+
+            # if solved
+            if stats.is_solved(i_episode, min_solve_threshold):
+                stats.print_solve(i_episode, stats_format, buffer_len, agent.noise_weight)
+                save_name = 'saves/solved.'
+                for i, save_agent in enumerate(agent.agents):
+                    torch.save(save_agent.actor_local.state_dict(), save_name + str(i) + '.actor.pth')
+                    torch.save(save_agent.critic_local.state_dict(), save_name + str(i) + '.critic.pth')
                 break
-        return all_scores 
+
 

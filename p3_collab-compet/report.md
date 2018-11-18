@@ -3,8 +3,7 @@
 [![20 Agent Reacher Environment](https://img.youtube.com/vi/ijF98-GBGqo/0.jpg)](https://www.youtube.com/watch?v=ijF98-GBGqo)
 
 ### Model Architecture
-In designing the neural architecture, my strategy was based on several observations. The dominating observation is the general utility of the Actor-Critic model for solving a broad range of tasks.  Second, in non-synthetic environments, agents must assume a noise function while constructing an internal representation of the environment.  Whether direct observation or indirect construct formation through participation in an information sharing mechanism, this noise function can impact agent performance in unintuitive ways.  These observations resulted in a decision to decouple the agents in a manner to allow scaling (thousands) and to facilitate future participation in communications strategies (e.g. coaching, cumulative reward sharing, hierarchial directives, common evnironment broadcasts).
-
+In designing the neural architecture, my strategy was based on several observations. The dominating observation is the general utility of the Actor-Critic model for solving a broad range of tasks.  Second, in non-synthetic environments, agents must assume a noise function while constructing an internal representation of the environment.  Whether direct observation or indirect construct formation through participation in an information sharing mechanism, this noise function can impact agent performance in unintuitive ways.  These observations resulted in a decision to decouple the agents in a manner to allow scaling and to facilitate future participation in communications strategies (e.g. coaching, cumulative reward sharing, hierarchial directives, common evnironment broadcasts).
 
 
 The Udacity provided actor and critic code in PyTorch as well as the noise function.  This code base was adapted for the 20 agent (version 2) environment. 
