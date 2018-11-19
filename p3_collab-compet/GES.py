@@ -8,6 +8,7 @@ import torch
 import time
 from collections import deque
 import numpy as np
+from tensorboardX import SummaryWriter
 
 
 
@@ -22,6 +23,7 @@ class Stats():
         self.best_avg_score = -np.Inf            # best score for a single episode
         self.time_start = time.time()            # track cumulative wall time
         self.total_steps = 0                     # track cumulative steps taken
+        self.writer = SummaryWriter()
 
     def update(self, steps, rewards, i_episode):
         """Update stats after each episode."""
@@ -47,7 +49,22 @@ class Stats():
                       rewards_01, rewards_02):
         common_stats = 'Episode: {:5}   Avg: {:8.3f}   BestAvg: {:8.3f}   σ: {:8.3f}  |  Steps: {:8}   Reward: {:8.3f}  |  '.format(i_episode, self.avg_score, self.best_avg_score, self.std_dev, steps, self.score)
         print('\r' + common_stats + stats_format.format(buffer_len, noise_weight), end="")
-       
+        # log lots of stuff to tensorboard
+        self.writer.add_scalar('global/reward', self.score, i_episode)
+        self.writer.add_scalar('global/std_dev', self.std_dev, i_episode)
+        self.writer.add_scalar('global/avg_reward', self.avg_score, i_episode)
+        self.writer.add_scalar('global/buffer_len', buffer_len, i_episode)
+        self.writer.add_scalar('global/noise_weight', noise_weight, i_episode)
+        self.writer.add_scalar('agent_01/critic_loss', critic_loss_01, i_episode)
+        self.writer.add_scalar('agent_02/critic_loss', critic_loss_02, i_episode)
+        self.writer.add_scalar('agent_01/actor_loss', actor_loss_01, i_episode)
+        self.writer.add_scalar('agent_02/actor_loss', actor_loss_02, i_episode)
+        self.writer.add_scalar('agent_01/noise_val_01', noise_val_01[0], i_episode)
+        self.writer.add_scalar('agent_01/noise_val_02', noise_val_01[1], i_episode)
+        self.writer.add_scalar('agent_02/noise_val_01', noise_val_02[0], i_episode)
+        self.writer.add_scalar('agent_02/noise_val_02', noise_val_02[1], i_episode)
+        self.writer.add_scalar('agent_01/reward', rewards_01, i_episode)
+        self.writer.add_scalar('agent_02/reward', rewards_02, i_episode)
 
     def print_epoch(self, i_episode, stats_format, *args):
         n_secs = int(time.time() - self.time_start)
@@ -72,9 +89,6 @@ class general_environment_solver():
         self.env = UnityEnvironment(file_name=unity_env)
         self.train_mode = True
        
-        # set the agents
-        self.agent_list = list()
-        
     def ready_agents(self, display_info=True, train_mode=True):
         # get the default brain
         self.brain_name = self.env.brain_names[0]
@@ -86,24 +100,11 @@ class general_environment_solver():
         # refresh the environment
         self.env_info = self.env.reset(train_mode=self.train_mode)[self.brain_name]
         
-        # number of agents
-        self.num_agents = len(self.env_info.agents)
-        if display_info==True:
-            print('Number of agents:', self.num_agents)
-        
-        # size of each action
-        self.action_size = brain.vector_action_space_size
-        if display_info==True:
-            print('Size of each action:', self.action_size)
-        
-        # examine the state space 
-        self.state = self.env_info.vector_observations
-        
         self.agent = MultiAgentDeepDeterministicPolicyGradient()
                                    
-    def run_maddpg(self, n_episodes=6500, max_timesteps=1000, min_solve_threshold=0.50, scores_window_length=100):
+    def run_maddpg(self, n_episodes=65000, max_timesteps=10000, min_solve_threshold=0.50, scores_window_length=100):
         # train the agent
-        from collections import deque
+
         """ MultiAgent Deep Deterministic Policy Gradients
     
         Params
@@ -115,24 +116,21 @@ class general_environment_solver():
          """
     
         # list containing scores from each episode
-        all_scores = []
-
-        scores_window = deque(maxlen=scores_window_length)
         stats = Stats()
         stats_format = 'Buffer: {:6}   NoiseW: {:.4}'
 
         for i_episode in range(1, n_episodes+1):
             rewards = []
-            self.env_info = self.env.reset(train_mode=self.train_mode)[self.brain_name]
-            self.state = self.env_info.vector_observations
+            env_info = self.env.reset(train_mode=self.train_mode)[self.brain_name]
+            state = env_info.vector_observations
 
             # loop over steps
             for t in range(max_timesteps):
                 # select an action
                 if self.agent.evaluation_only:  # disable noise on evaluation
-                    action = self.agent.act(self.state, add_noise=False)
+                    action = self.agent.act(state, add_noise=False)
                 else:
-                    action = self.agent.act(self.state)
+                    action = self.agent.act(state)
 
                 # take action in environment
                 self.env_info = self.env.step(action)[self.brain_name]
@@ -141,8 +139,8 @@ class general_environment_solver():
                 done = self.env_info.local_done
 
                 # update agent with returned information
-                self.agent.step(self.state, action, reward, next_state, done)
-                self.state = next_state
+                self.agent.step(state, action, reward, next_state, done)
+                state = next_state
                 rewards.append(reward)
                 if any(done):
                     break

@@ -14,16 +14,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class MultiAgentDeepDeterministicPolicyGradient():
     """Interacts with and learns from the environment using multiple agents."""
-    
-    def __init__(self, action_size=2, seed=0, load_file=None,
-                 num_agents=2,
-                 buffer_size=int(1e6),
-                 batch_size=128,
-                 gamma=0.99,
-                 update_every=1,
-                 noise_start=1.0,
-                 noise_decay=1.0,
-                 evaluation_only=False):
+    def __init__(self, action_size=2, seed=1999, load_file=None,num_agents=2,buffer_size=int(1e4),batch_size=128,gamma=0.99,update_every=2,noise_weight=1.5,noise_decay=.999999,evaluation_only=False):
         """
         Params
         ======
@@ -39,35 +30,36 @@ class MultiAgentDeepDeterministicPolicyGradient():
             update_every (int): how often to update the network
             evaluation_only (bool): set to True to disable updating gradients and adding noise
         """
-
         self.batch_size = batch_size
         self.update_every = update_every
         self.gamma = gamma
         self.num_agents = num_agents
-        self.noise_weight = noise_start
+        self.noise_weight = noise_weight
         self.noise_decay = noise_decay
         self.timestep = 0
         self.evaluation_only = evaluation_only
         
-        # create two agents, each with their own actor and critic
-
-        self.agents = [DeepDeterministicPolicyGradientAgent( 0, batch_size, gamma), DeepDeterministicPolicyGradientAgent( 1, batch_size, gamma)]
+        # create two agents, each with their own actor and critic (but shared memory/experience buffer)
+        self.agents = [DeepDeterministicPolicyGradientAgent( 0, batch_size, gamma, seed), DeepDeterministicPolicyGradientAgent( 1, batch_size, gamma, seed)]
         # create shared replay buffer
-        self.memory = ReplayBuffer(action_size, buffer_size, self.batch_size, seed)
+        self.memory = ReplayBuffer(action_size, buffer_size, batch_size, seed)
         if load_file:
             for i, save_agent in enumerate(self.agents):
                 actor_file = torch.load(load_file + '.' + str(i) + '.actor.pth', map_location='cpu')
                 critic_file = torch.load(load_file + '.' + str(i) + '.critic.pth', map_location='cpu')
-                save_agent.actor_local.load_state_dict(actor_file)
-                save_agent.actor_target.load_state_dict(actor_file)
                 save_agent.critic_local.load_state_dict(critic_file)
                 save_agent.critic_target.load_state_dict(critic_file)
+                save_agent.actor_local.load_state_dict(actor_file)
+                save_agent.actor_target.load_state_dict(actor_file)
+            print('Loaded: {}.critic.pth'.format(load_file))    
             print('Loaded: {}.actor.pth'.format(load_file))
-            print('Loaded: {}.critic.pth'.format(load_file))
+            
 
     def step(self, all_states, all_actions, all_rewards, all_next_states, all_dones):
-        all_states = all_states.reshape(1, -1)  # reshape 2x24 into 1x48 dim vector
-        all_next_states = all_next_states.reshape(1, -1)  # reshape 2x24 into 1x48 dim vector
+        # reshape 2x24 into 1x48 dim vector
+        all_states = all_states.reshape(1, -1)  
+        # reshape 2x24 into 1x48 dim vector
+        all_next_states = all_next_states.reshape(1, -1)  
         self.memory.add(all_states, all_actions, all_rewards, all_next_states, all_dones)
         # Learn every update_every time steps.
         self.timestep = (self.timestep + 1) % self.update_every
@@ -118,6 +110,8 @@ class ReplayBuffer:
             buffer_size (int): maximum size of buffer
             batch_size (int): size of each training batch
         """
+        random.seed(seed)
+
         self.action_size = action_size
         self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
         self.batch_size = batch_size
@@ -132,13 +126,11 @@ class ReplayBuffer:
     def sample(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
-
         states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
         actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).float().to(device)
         rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
         next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
         dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
-
         return (states, actions, rewards, next_states, dones)
 
     def __len__(self):
@@ -152,8 +144,7 @@ class ReplayBuffer:
 
 class DeepDeterministicPolicyGradientAgent():
     """Interacts with and learns from the environment."""
-    # agent_id, state_size=24, action_size=2, eps_start=6,eps_end=0,eps_decay=1000,random_seed=1999, critic_weight_decay = 0, learning_rate_actor = 5e-3, learning_rate_critic = 5e-4, replay_buffer_size= int(1e5), mini_batch_size=128, gamma=.99, tau=2e-1 , num_agents=2
-    def __init__(self, idx, batch_size, gamma, state_size=24, action_size=2, critic_observable_agent_envs=2,random_seed=1999):
+    def __init__(self, id, batch_size, gamma, seed, state_size=24, action_size=2, critic_observable_agent_envs=2):
         """Initialize an Agent object.
         
         Params
@@ -162,18 +153,20 @@ class DeepDeterministicPolicyGradientAgent():
             action_size (int): dimension of each action
             random_seed (int): random seed
         """
+        random.seed(seed)
+        np.random.seed(seed)
 
-        self.idx = idx
+        self.id = id
         self.action_size = action_size
         self.state_size = state_size
-        self.seed = random.seed(random_seed)
+        self.seed = random.seed(seed)
         self.critic_observable_agent_envs = critic_observable_agent_envs
         self.batch_size = batch_size        # minibatch size
         self.gamma = gamma            # discount factor
         self.tau = 1e-2             # for soft update of target parameters
-        self.lr_actor = 1e-3         # learning rate of the actor
-        self.lr_critic = 5e-3        # learning rate of the critic
-        self.critic_weight_decay = 0 #0.00001   # L2 weight decay
+        self.lr_actor = 1e-4         # learning rate of the actor
+        self.lr_critic = 1e-3        # learning rate of the critic
+        self.critic_weight_decay = 0.0  #0.00001   # L2 weight decay
 
         # track stats for tensorboard logging
         self.critic_loss = 0
@@ -181,17 +174,17 @@ class DeepDeterministicPolicyGradientAgent():
         self.noise_val = 0
        
         # Actor Network (w/ Target Network)
-        self.actor_local = Actor(state_size, action_size, random_seed).to(device)
-        self.actor_target = Actor(state_size, action_size, random_seed).to(device)
+        self.actor_local = Actor(state_size, action_size, seed).to(device)
+        self.actor_target = Actor(state_size, action_size, seed).to(device)
         self.actor_optimizer = optim.Adam(self.actor_local.parameters(), lr=self.lr_actor)
 
         # Critic Network (w/ Target Network)
-        self.critic_local = Critic( state_size, action_size, critic_observable_agent_envs, random_seed).to(device)
-        self.critic_target = Critic(state_size, action_size, critic_observable_agent_envs, random_seed).to(device)
+        self.critic_local = Critic( state_size, action_size, critic_observable_agent_envs, seed).to(device)
+        self.critic_target = Critic(state_size, action_size, critic_observable_agent_envs, seed).to(device)
         self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=self.lr_critic, weight_decay=self.critic_weight_decay)
 
         # Noise process
-        self.noise = OUNoise(action_size, random_seed)
+        self.noise = OUNoise(action_size, seed)
 
 
     def act(self, state, noise_weight=1.0, add_noise=True):
@@ -223,18 +216,6 @@ class DeepDeterministicPolicyGradientAgent():
 
         states, actions, rewards, next_states, dones = experiences
 
-        # ---------------------------- update actor ---------------------------- #
-        # compute actor loss
-        self.actor_optimizer.zero_grad()
-        # detach actions from other agents
-        actions_pred = [actions if i == self.idx else actions.detach() for i, actions in enumerate(all_actions)]
-        actions_pred = torch.cat(actions_pred, dim=1).to(device)
-        actor_loss = -self.critic_local(states, actions_pred).mean()
-        self.actor_loss = actor_loss.item()  # calculate policy gradient
-        # minimize loss
-        actor_loss.backward()
-        self.actor_optimizer.step()
-
         # ---------------------------- update critic ---------------------------- #
         # get predicted next-state actions and Q values from target models
         self.critic_optimizer.zero_grad()
@@ -250,14 +231,26 @@ class DeepDeterministicPolicyGradientAgent():
         critic_loss = F.mse_loss(q_expected, q_targets.detach())
         self.critic_loss = critic_loss.item()  # for tensorboard logging
         # minimize loss
-        critic_loss.backward()
+        critic_loss = critic_loss.backward()
         self.critic_optimizer.step()
 
-        
+        # ---------------------------- update actor ---------------------------- #
+        # compute actor loss
+        self.actor_optimizer.zero_grad()
+        # detach actions from other agents
+        actions_pred = [actions if i == self.id else actions.detach() for i, actions in enumerate(all_actions)]
+        actions_pred = torch.cat(actions_pred, dim=1).to(device)
+        actor_loss = -self.critic_local(states, actions_pred).mean()
+        self.actor_loss = actor_loss.item()  # calculate policy gradient
+        # minimize loss
+        actor_loss.backward()
+        self.actor_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
+        self.soft_update(self.actor_local, self.actor_target, self.tau)
         self.soft_update(self.critic_local, self.critic_target, self.tau)
-        self.soft_update(self.actor_local, self.actor_target, self.tau)                   
+        
+            
 
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.
@@ -274,8 +267,10 @@ class DeepDeterministicPolicyGradientAgent():
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 
-    def __init__(self, size, seed, mu=0., theta=0.16, sigma=0.2):
+    def __init__(self, size, seed, mu=0.0, theta=0.15, sigma=0.2):
         """Initialize parameters and noise process."""
+        random.seed(seed)
+        np.random.seed(seed)
         self.mu = mu * np.ones(size)
         self.theta = theta
         self.sigma = sigma
