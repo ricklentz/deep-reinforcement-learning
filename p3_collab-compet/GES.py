@@ -77,7 +77,7 @@ class Stats():
 
 class general_environment_solver():
     """ General Solver for Unity Environments """
-    def __init__(self, unity_env='Tennis.app'):
+    def __init__(self, unity_env='Tennis_Linux/Tennis.x86_64'):
         
         """Initialize a general environment solver.  Run refresh_env to reset the solver.
         You can run the solver using the defaults.
@@ -102,7 +102,7 @@ class general_environment_solver():
         
         self.agent = MultiAgentDeepDeterministicPolicyGradient()
                                    
-    def run_maddpg(self, n_episodes=65000, max_timesteps=10000, min_solve_threshold=0.50, scores_window_length=100):
+    def run_maddpg(self, n_episodes=10000000, max_timesteps=1000, min_solve_threshold=0.50, scores_window_length=100):
         # train the agent
 
         """ MultiAgent Deep Deterministic Policy Gradients
@@ -170,9 +170,9 @@ class general_environment_solver():
 
             # if solved
             if stats.is_solved(i_episode, min_solve_threshold):
-                stats.print_solve(i_episode, stats_format, buffer_len, agent.noise_weight)
+                stats.print_solve(i_episode, stats_format, buffer_len, self.agent.noise_weight)
                 save_name = 'saves/solved.'
-                for i, save_agent in enumerate(agent.agents):
+                for i, save_agent in enumerate(self.agent.agents):
                     torch.save(save_agent.actor_local.state_dict(), save_name + str(i) + '.actor.pth')
                     torch.save(save_agent.critic_local.state_dict(), save_name + str(i) + '.critic.pth')
                 break

@@ -14,7 +14,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class MultiAgentDeepDeterministicPolicyGradient():
     """Interacts with and learns from the environment using multiple agents."""
-    def __init__(self, action_size=2, seed=1999, load_file=None,num_agents=2,buffer_size=int(1e4),batch_size=128,gamma=0.99,update_every=2,noise_weight=1.5,noise_decay=.999999,evaluation_only=False):
+    def __init__(self, action_size=2, seed=1999, load_file=None,num_agents=2,buffer_size=int(1e5),batch_size=256,gamma=0.99,update_every=4,noise_weight=1.1999,noise_decay=.999999,evaluation_only=False):
         """
         Params
         ======
