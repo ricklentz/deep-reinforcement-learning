@@ -1,6 +1,6 @@
 ## MultiAgent Deep Deterministic Policy Gradient - Actor-Critic, Continuous Control Task in Unity Tennis Environment
 
-[//]: # ([![20 Agent Reacher Environment](https://img.youtube.com/vi/ijF98-GBGqo/0.jpg)](https://www.youtube.com/watch?v=ijF98-GBGqo))
+
 
 ### Model Architecture
 
