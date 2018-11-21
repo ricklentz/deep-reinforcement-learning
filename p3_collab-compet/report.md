@@ -16,7 +16,7 @@ Hyperparameters, I used a larger batch size (256 vs. 64) and a smaller buffer si
 
 ## Results and Future Work
 
-This model is able to achieve the the reward performance goal of 0.5 in just under 23,000 episodes.
+This model is able to achieve the the reward performance goal of 0.5 in just under 24,000 episodes.
 
 <img src="score_episode_num.png" width="510" height="340" />
 
