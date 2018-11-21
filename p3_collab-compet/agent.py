@@ -14,7 +14,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class MultiAgentDeepDeterministicPolicyGradient():
     """Interacts with and learns from the environment using multiple agents."""
-    def __init__(self, action_size=2, seed=1999, load_file=None,num_agents=2,buffer_size=int(1e5),batch_size=256,gamma=0.99,update_every=4,noise_weight=1.1999,noise_decay=.999999,evaluation_only=False):
+    def __init__(self, action_size=2, seed=1999, load_file=None,num_agents=2,buffer_size=int(1e5),batch_size=256,gamma=0.99,update_every=1,noise_weight=1.1999,noise_decay=.999999,evaluation_only=False):
         """
         Params
         ======
@@ -164,8 +164,8 @@ class DeepDeterministicPolicyGradientAgent():
         self.batch_size = batch_size        # minibatch size
         self.gamma = gamma            # discount factor
         self.tau = 1e-2             # for soft update of target parameters
-        self.lr_actor = 1e-4         # learning rate of the actor
-        self.lr_critic = 1e-3        # learning rate of the critic
+        self.lr_actor = 2e-4         # learning rate of the actor
+        self.lr_critic = 5e-4        # learning rate of the critic
         self.critic_weight_decay = 0.0  #0.00001   # L2 weight decay
 
         # track stats for tensorboard logging
