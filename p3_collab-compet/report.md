@@ -20,6 +20,6 @@ This model is able to achieve the the reward performance goal of 0.5 in just und
 
 <img src="score_episode_num.png" width="510" height="340" />
 
-Architecture could be researched further.  Specifically, I'd like to use as mentioned in the MAACMCCE paper, it would be nice to test an ensemble of policies.  Also, working on limited environment information sharing to Critic would be helpful before attempting the Soccer Environment.  
+Architecture could be researched further.  Specifically, I'd like to use the directions mentioned in the MAACMCCE paper, it would be nice to test an ensemble of policy networks.  Also, working to restrict the environment information available to Critic would be helpful before attempting the Soccer Environment and perhaps for other more real world applications.  
 
-I could further investigate tuning the Ornstein-Uhlenbeck noise level.  These impact the degree of exploration the agents do.  
+Also, it would be good to investigate tuning the Ornstein-Uhlenbeck noise level.  These impact the degree of exploration the agents may result in a more diverse range of input experiences.  
