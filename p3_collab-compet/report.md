@@ -18,7 +18,7 @@ Hyperparameters, I used a larger batch size (256 vs. 64) and a smaller buffer si
 
 This model is able to achieve the the reward performance goal of 0.5 in just under 10000 episodes.
 
-<img src="score_episode_num.png" width="510" height="340" />
+<img src="score_episode_num.png" width="1494" height="751" />
 
 Architecture could be researched further.  Specifically, I'd like to use as mentioned in the MAACMCCE paper, it would be nice to test an ensemble of policies.  Also, working on limited environment information sharing to Critic would be helpful before attempting the Soccer Environment.  
 
