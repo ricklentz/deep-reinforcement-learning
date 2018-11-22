@@ -11,7 +11,7 @@ import numpy as np
 from tensorboardX import SummaryWriter
 
 
-
+# Reference/Credit Stats class & reporting mechanisms: danielnbarbosa/drlnd_collaboration_and_competition 
 class Stats():
     def __init__(self):
         self.score = None
